@@ -34,6 +34,9 @@ using (
 
     ValueRange response = service.Spreadsheets.Values.Get(spreadsheet_id, range).Execute();
 
+    Console.WriteLine();
+    Console.WriteLine($"Processing bounties up to #{response.Values.Count + 1}");
+
     for (var i = 0; i < response.Values.Count; i++)
     {
         var row = response.Values[i];
@@ -69,26 +72,35 @@ using (
 
         ask:
 
-        Console.Write("Response (enter to open browser): ");
-        var responseText = Console.ReadLine();
+        Console.Write("Accept? (enter to open browser) ");
+        string? acceptText = Console.ReadLine();
+        string? amount = string.Empty;
 
-        if (string.IsNullOrEmpty(responseText))
+        if (string.IsNullOrEmpty(acceptText))
         {
             Process.Start("open", row[5].ToString() ?? throw new InvalidOperationException());
             goto ask;
         }
 
+        if (acceptText == "yes")
+        {
+            while (string.IsNullOrEmpty(amount))
+            {
+                Console.Write("Amount: ");
+                amount = Console.ReadLine();
+            }
+        }
 
         var update = new ValueRange
         {
             Values = new Collection<IList<object>>
             {
-                new List<object> { responseText }
+                new List<object> { acceptText, amount }
             }
         };
 
-        var updateRequest = service.Spreadsheets.Values.Update(update, spreadsheet_id, $"Responses!L{rowNumber}");
-        updateRequest.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.RAW;
+        var updateRequest = service.Spreadsheets.Values.Update(update, spreadsheet_id, $"Responses!L{rowNumber}:N{rowNumber}");
+        updateRequest.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
         updateRequest.Execute();
     }
 }
